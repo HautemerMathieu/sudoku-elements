@@ -125,6 +125,10 @@ img{object-fit:contain}
 .cell.given{font-weight:1000}.cell.player{color:#2188ba}.cell.related:not(.selected){background:#f0f8fa}.cell.same:not(.selected){background:#e2f0f7}
 .cell.c3{border-right:3px solid #314c64}.cell.r3{border-bottom:3px solid #314c64}
 .cell.selected{background:#bde9f6;box-shadow:inset 0 0 0 3px #2ca9d2;z-index:1}
+/* Animation discrète quand une ligne, colonne ou région 3×3 est complétée. */
+.completion-fx{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;border-radius:10px}
+.completion-unit{position:absolute;box-sizing:border-box;border:2px solid rgba(90,185,255,.48);border-radius:5px;background:rgba(158,216,255,.13);box-shadow:inset 0 0 16px rgba(111,198,255,.23),0 0 13px rgba(70,175,245,.17);animation:unitCompletion .95s ease-out forwards}
+@keyframes unitCompletion{0%{opacity:0;transform:scale(.994)}22%{opacity:1;transform:scale(1)}65%{opacity:.63}100%{opacity:0;transform:scale(1.006)}}
 .cell.rock{background:#eceddb}.cell.rock img{position:absolute;inset:3%;width:94%;height:94%;max-width:none;max-height:none;object-fit:contain;pointer-events:none}.cell.burned{background:#ffe3d3;color:#bf673e}.cell.burned span{font-size:26px}
 .cell.fire-warning{animation:fireBlink .56s steps(1,end) infinite;z-index:3;box-shadow:inset 0 0 0 3px #f46c34,0 0 12px #f79933}
 .cell.wave{animation:waveHit 1s ease}.cell.wind-hit{animation:windHit .8s ease}.cell.quake{animation:quake .5s ease}
@@ -452,6 +456,12 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .map-streak{font-size:12px;white-space:nowrap;font-weight:900;color:#a97836}
 @media(max-width:590px){.map-bar-inner{gap:6px;padding:7px 8px 10px}.map-bar-title{min-width:0}.map-bar-title strong{font-size:13px}.map-bar-title small{font-size:10px}.map-success-btn{padding:8px 6px;font-size:12px}.map-streak{font-size:11px}.map-tools .pill{font-size:11px;padding:7px 7px}.ach-badges{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 5px}.ach-medal{width:60px;height:60px}.ach-streak-copy{max-width:190px}.ach-daily-icon{width:47px;height:47px}.ach-daily-btn{padding:10px 8px;font-size:12px}}
 @media(max-width:350px){.map-bar-title small,.map-streak{display:none}.map-bar-title strong{font-size:12px}.ach-badges{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Chiffre entièrement placé : touche atténuée, automatiquement réactivée après effacement. */
+#play .digit-btn.number-complete{background:linear-gradient(155deg,#e7e7e2,#d3d4cf);border-color:#8a8e8c;color:#777e7e;box-shadow:0 3px 0 #777a7755;opacity:.66;cursor:not-allowed}
+#play .digit-btn.number-complete:active{transform:none;box-shadow:0 3px 0 #777a7755}
+/* Secours si le dialogue de defaite ne s'affiche pas dans un navigateur integre. */
+#play .dead-recovery{position:fixed;z-index:35;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);white-space:nowrap;max-width:calc(100vw - 24px);border:2px solid #fff5dc;border-radius:16px;padding:12px 23px;background:#fef3d7;color:#5a392c;font-weight:900;box-shadow:0 5px 0 #a87644,0 9px 20px #20170e55}
 </style>
 </head>
 <body>
@@ -483,10 +493,10 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </section>
 <section id="play" class="screen" aria-label="Sudoku"><div id="playAtmos" class="play-atmos" aria-hidden="true"></div><img id="sceneLeft14" class="scene-deco scene-deco-left" alt="" aria-hidden="true"><img id="sceneRight14" class="scene-deco scene-deco-right" alt="" aria-hidden="true"><div class="play-blob blob-left"></div><div class="play-blob blob-right"></div><div id="particles" class="play-particles" aria-hidden="true"></div>
  <div class="play-shell"><header class="play-header"><div class="play-heading"><button id="gameBack" class="icon-btn" aria-label="Retour à la carte">‹</button><div class="play-title"><small id="levelMeta">Niveau 1 sur 10</small><strong><img id="gameIcon" class="element-icon" alt=""><span id="levelTitle">Les premiers chiffres</span></strong></div></div><div class="play-status"><span id="hearts" class="play-hearts" title="Vies restantes">❤️❤️❤️</span><span class="pill play-coins">🪙 <span id="gameCoins">0</span></span><button id="pauseBtn" class="icon-btn" aria-label="Pause">Ⅱ</button></div></header>
- <div class="play-layout"><div class="play-main"><div class="board-frame"><div id="board" class="board" role="grid" aria-label="Grille de Sudoku"></div><div id="waterFx" class="water-wave-fx" aria-hidden="true"></div><div id="pauseCover" class="pause-cover" hidden>⏸ Partie en pause</div></div>
+ <div class="play-layout"><div class="play-main"><div class="board-frame"><div id="board" class="board" role="grid" aria-label="Grille de Sudoku"></div><div id="completionFx" class="completion-fx" aria-hidden="true"></div><div id="waterFx" class="water-wave-fx" aria-hidden="true"></div><div id="pauseCover" class="pause-cover" hidden>⏸ Partie en pause</div></div>
  <div class="play-actions"><button id="hintBtn" class="action-tool"><img id="hintIcon" alt="">Indice</button><button id="eraseBtn" class="action-tool">⌫ Effacer</button><button id="notesBtn" class="action-tool">✎ Notes</button><button id="undoBtn" class="action-tool">↶ Annuler</button></div><div id="digits" class="keypad"></div></div>
  <aside class="play-aside"><div id="timerCircle" class="timer-circle"><div class="timer-center"><div id="timerCaption" class="timer-caption">Prochain événement</div><div id="timerValue" class="timer-value">02:00</div></div></div><div id="nextEvent" class="next-event">Première attaque dans 2 minutes</div><div id="ruleShort" class="play-note">Une seule case clignote, puis son chiffre est masqué.</div><div id="bossPanel" class="boss-panel" hidden><div class="boss-kicker">Épreuve finale</div><h3>Cycle des éléments</h3><div id="bossCycle" class="boss-cycle"></div></div></aside></div>
- </div></section>
+ </div><button id="deadRecovery" class="dead-recovery" type="button" hidden>↻ Recommencer le niveau</button></section>
 <div id="modal" class="modal-backdrop" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div id="modalSymbol" class="modal-symbol">⭐</div><h2 id="modalTitle">Niveau terminé !</h2><p id="modalText"></p><div id="modalButtons"></div><div id="modalFine" class="fine"></div></div></div>
 <div id="tutorial" class="tutorial-backdrop" hidden>
  <div class="tutorial-sheet" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
@@ -752,20 +762,36 @@ function showTutorial(theme){const cfg=TUTORIAL[theme];if(!cfg||tutorialSeen.has
  }
  dialog.hidden=false;$('tutorialStart').focus();
 }
-function openGame(id){if(id===DAILY_ID)syncDaily();if(!byId.has(id))return;if(id!==DAILY_ID&&!isUnlocked(id)){showUnlock(id);return;}if(id!==DAILY_ID&&states[id]?.won){showReplay(id);return;}activeLevel=id;selectedLevel=id;if(!states[id])states[id]=initial(id);const b=states[id];b.waveTargets=[];b.waveErasing=[];b.waveActive=false;clearTimeout(waterFxTimeout);$('waterFx').replaceChildren();$('waterFx').className='water-wave-fx';$('waterFx').removeAttribute('style');showScreen('play');showTutorial(byId.get(id).type);if($('tutorial').hidden){begin(b);lastTime=performance.now()}renderGame();save()}
+function openGame(id){if(id===DAILY_ID)syncDaily();if(!byId.has(id))return;if(id!==DAILY_ID&&!isUnlocked(id)){showUnlock(id);return;}if(id!==DAILY_ID&&states[id]?.won){showReplay(id);return;}activeLevel=id;selectedLevel=id;if(!states[id])states[id]=initial(id);const b=states[id];$('completionFx').replaceChildren();b.waveTargets=[];b.waveErasing=[];b.waveActive=false;clearTimeout(waterFxTimeout);$('waterFx').replaceChildren();$('waterFx').className='water-wave-fx';$('waterFx').removeAttribute('style');showScreen('play');if(b.dead||b.errors>=3){b.dead=true;b.paused=true;renderGame();modalShow('dead');save();return;}showTutorial(byId.get(id).type);if($('tutorial').hidden){begin(b);lastTime=performance.now()}renderGame();save()}
+function placedDigitCounts(b){
+ const counts=Array(10).fill(0);
+ for(let i=0;i<81;i++){const number=val(b,i);if(number>=1&&number<=9)counts[number]++}
+ return counts;
+}
+function updateDigitButtons(b){
+ const counts=placedDigitCounts(b),inactive=b.dead||b.paused||b.won;
+ for(let number=1;number<=9;number++){
+  const key=$('digits').children[number-1];if(!key)continue;
+  const complete=counts[number]>=9;
+  key.classList.toggle('number-complete',complete);
+  key.disabled=inactive||complete;
+  key.setAttribute('aria-label',complete?`Chiffre ${number}, tous placés`:`Placer le ${number}`);
+  key.title=complete?'9/9 placés':`${counts[number]}/9 placés`;
+ }
+}
 function renderBoard(){const b=board();const cells=[];for(let i=0;i<81;i++){const r=Math.floor(i/9),c=i%9,v=val(b,i),locked=b.rocks.includes(i),hidden=b.hidden.includes(i),btn=document.createElement('button');btn.type='button';btn.className='cell';btn.setAttribute('role','gridcell');btn.setAttribute('aria-label',`Ligne ${r+1}, colonne ${c+1}${hidden?', chiffre masqué':locked?', rocher':v?', '+v:''}`);
  if(c===2||c===5)btn.classList.add('c3');if(r===2||r===5)btn.classList.add('r3');if(b.given[i])btn.classList.add('given');else if(b.values[i])btn.classList.add('player');
  // Une case brûlée ne doit jamais réagir aux surbrillances : sa valeur reste secrète.
  if(b.selected>=0&&!hidden){const sr=Math.floor(b.selected/9),sc=b.selected%9;if(r===sr||c===sc||Math.floor(r/3)===Math.floor(sr/3)&&Math.floor(c/3)===Math.floor(sc/3))btn.classList.add('related');if(v&&v===val(b,b.selected)&&!b.hidden.includes(b.selected))btn.classList.add('same')}
  if(b.selected===i&&!hidden)btn.classList.add('selected');if(b.waveTargets?.includes(i))btn.classList.add('wave-target');if(b.waveErasing?.includes(i))btn.classList.add('wave-erasing');if(b.flash.includes(i))btn.classList.add(b.flashType);if(b.firePending===i)btn.classList.add('fire-warning');
  if(locked){btn.classList.add('rock');btn.append(icon('rock'))}else if(hidden){btn.classList.add('burned');const q=document.createElement('span');q.textContent='?';btn.append(q)}else if(v){btn.textContent=v}else if(b.notes[i]?.length){const div=document.createElement('div');div.className='notes-grid';for(let n=1;n<=9;n++){const span=document.createElement('span');span.textContent=b.notes[i].includes(n)?n:'';div.append(span)}btn.append(div)}
- btn.onclick=()=>{if(!canPlay()||hidden)return;b.selected=i;renderBoard();save()};cells.push(btn)}$('board').replaceChildren(...cells);$('pauseCover').hidden=!b.paused||b.dead||b.won}
+ btn.onclick=()=>{if(!canPlay()||hidden)return;b.selected=i;renderBoard();save()};cells.push(btn)}$('board').replaceChildren(...cells);$('pauseCover').hidden=!b.paused||b.dead||b.won;updateDigitButtons(b)}
 function renderTimer(){if(screen!=='play')return;const b=board(),lv=currentLevel(),evented=lv.type!=='standard',kind=currentNextType(b),label={water:'Vague',wind:'Vent',earth:'Secousse',fire:'Feu',standard:'Classique'}[kind]||'Attaque';const color=ELEMENT[kind].color;
  $('timerCircle').style.setProperty('--accent',color);$('timerCircle').style.setProperty('--pct',evented?Math.min(1,Math.max(0,b.remaining/eventInterval(lv))):1);$('timerCaption').textContent=evented?({water:'Prochaine vague',wind:'Prochain vent',earth:'Prochaine secousse',fire:'Prochain feu'}[kind]||'Prochaine attaque'):'Mode classique';$('timerValue').textContent=evented?timeText(b.remaining):'∞';$('nextEvent').textContent=evented?`Prochaine attaque : ${ELEMENT[kind].name}`:'Aucune attaque élémentaire.';
  $('timerCircle').style.filter=evented&&b.remaining<=10?'drop-shadow(0 0 12px '+color+')':'drop-shadow(0 5px 9px #22547619)';
  if(lv.type==='multi'){for(const el of $('bossCycle').children){el.classList.toggle('active',el.dataset.element===kind);const idx=BOSS_ORDER.indexOf(el.dataset.element);el.classList.toggle('done',idx<(b.eventIndex%4))}} }
-function renderGame(){const b=board(),lv=currentLevel(),e=ELEMENT[lv.type];ambient(lv.type);$('levelMeta').textContent=lv.daily?'DÉFI DU JOUR':lv.bonus?'Niveau 11 · Défi secret':`Niveau ${lv.id} sur 10${lv.id===10?' · Boss final':''}`;$('levelTitle').textContent=lv.name;$('gameIcon').src=A[e.icon];$('hearts').textContent='❤️'.repeat(Math.max(0,3-b.errors))+'🤍'.repeat(Math.min(3,b.errors));$('gameCoins').textContent=coins;$('pauseBtn').textContent=b.paused?'▶':'Ⅱ';$('ruleShort').textContent=lv.type==='multi'?'Quatre attaques en alternance : Eau → Vent → Feu → Terre.':e.note;$('bossPanel').hidden=lv.type!=='multi';$('notesBtn').classList.toggle('active',b.notesMode);$('notesBtn').textContent=b.notesMode?'✎ Notes ✓':'✎ Notes';
- for(const id of ['hintBtn','eraseBtn','notesBtn'])$(id).disabled=b.dead||b.paused||b.won;$('undoBtn').disabled=b.dead||b.paused||b.won||!b.lastMove;for(const key of $('digits').children)key.disabled=b.dead||b.paused||b.won;
+function renderGame(){const b=board(),lv=currentLevel(),e=ELEMENT[lv.type];ambient(lv.type);$('levelMeta').textContent=lv.daily?'DÉFI DU JOUR':lv.bonus?'Niveau 11 · Défi secret':`Niveau ${lv.id} sur 10${lv.id===10?' · Boss final':''}`;$('levelTitle').textContent=lv.name;$('gameIcon').src=A[e.icon];$('hearts').textContent='❤️'.repeat(Math.max(0,3-b.errors))+'🤍'.repeat(Math.min(3,b.errors));$('gameCoins').textContent=coins;$('pauseBtn').textContent=b.paused?'▶':'Ⅱ';$('deadRecovery').hidden=!b.dead;$('ruleShort').textContent=lv.type==='multi'?'Quatre attaques en alternance : Eau → Vent → Feu → Terre.':e.note;$('bossPanel').hidden=lv.type!=='multi';$('notesBtn').classList.toggle('active',b.notesMode);$('notesBtn').textContent=b.notesMode?'✎ Notes ✓':'✎ Notes';
+ for(const id of ['hintBtn','eraseBtn','notesBtn'])$(id).disabled=b.dead||b.paused||b.won;$('undoBtn').disabled=b.dead||b.paused||b.won||!b.lastMove;
  renderTimer();renderBoard()}
 function canPlay(){const b=board();return screen==='play'&&!b.paused&&!b.dead&&!b.won&&!b.waveActive&&$('modal').hidden&&$('tutorial').hidden}
 function begin(b){b.started=true}
@@ -782,12 +808,37 @@ function victory(b){if(b.won||solvedCount(b)!==81)return false;b.won=true;b.paus
  // 100 pièces lors de la première victoire, puis 10 supplémentaires à 3 étoiles.
  b.reward=(!old?100:0)+((best===3 && old?.stars!==3)?10:0);coins+=b.reward;}
  qualifyStreak();unlockBadges(true);b.log='Niveau terminé !';renderGame();save();modalShow('win',stars);animateRewardCoins(b.reward);return true}
-function setNumber(n){const b=board(),i=b.selected;if(!canPlay()||i<0||b.given[i]||b.rocks.includes(i)||b.hidden.includes(i))return;if(b.notesMode){if(b.values[i])return;begin(b);const old=b.notes[i],index=old.indexOf(n);if(index<0)old.push(n);else old.splice(index,1);b.log='✎ Notes modifiées.';renderGame();save();return}
+// Une animation seulement sur l'unité terminée par la nouvelle saisie.
+function completedUnitsAt(b,i){
+ const r=Math.floor(i/9),c=i%9;
+ const groups=[
+  Array.from({length:9},(_,j)=>r*9+j),
+  Array.from({length:9},(_,j)=>j*9+c),
+  Array.from({length:9},(_,j)=>(Math.floor(r/3)*3+Math.floor(j/3))*9+Math.floor(c/3)*3+j%3)
+ ];
+ return groups.filter(indices=>indices.every(j=>val(b,j)===b.solution[j]));
+}
+function showCompletedUnits(b,groups){
+ if(!groups.length||screen!=='play'||board()!==b)return;
+ const layer=$('completionFx'),frame=layer.parentElement,cells=$('board').children,base=frame.getBoundingClientRect();
+ for(const group of groups){
+  const rects=group.map(i=>cells[i]?.getBoundingClientRect()).filter(Boolean);
+  if(rects.length!==9)continue;
+  const left=Math.min(...rects.map(rect=>rect.left))-base.left-frame.clientLeft;
+  const top=Math.min(...rects.map(rect=>rect.top))-base.top-frame.clientTop;
+  const right=Math.max(...rects.map(rect=>rect.right))-base.left-frame.clientLeft;
+  const bottom=Math.max(...rects.map(rect=>rect.bottom))-base.top-frame.clientTop;
+  const glow=document.createElement('span');glow.className='completion-unit';
+  glow.style.left=left+'px';glow.style.top=top+'px';glow.style.width=(right-left)+'px';glow.style.height=(bottom-top)+'px';
+  layer.append(glow);setTimeout(()=>glow.remove(),990);
+ }
+}
+function setNumber(n){const b=board(),i=b.selected;if(!canPlay()||i<0||b.given[i]||b.values[i]||b.rocks.includes(i)||b.hidden.includes(i)||placedDigitCounts(b)[n]>=9)return;if(b.notesMode){if(b.values[i])return;begin(b);const old=b.notes[i],index=old.indexOf(n);if(index<0)old.push(n);else old.splice(index,1);b.log='✎ Notes modifiées.';renderGame();save();return}
  if(val(b,i)===n)return;begin(b);if(n!==b.solution[i]){b.errors++;b.log='Ce chiffre n’est pas le bon.';flash([i],'quake');if(b.errors>=3){b.dead=true;b.paused=true;renderGame();modalShow('dead');}else{renderGame();toast('❌ Une vie perdue')}save();return}
- b.lastMove={index:i,previous:b.values[i],notes:[...b.notes[i]],wasHidden:b.hidden.includes(i)};b.values[i]=n;b.notes[i]=[];b.hidden=b.hidden.filter(k=>k!==i);b.log='Bien joué !';checkRocks(b);if(!victory(b))renderGame();save()}
+ b.lastMove={index:i,previous:b.values[i],notes:[...b.notes[i]],wasHidden:b.hidden.includes(i)};b.values[i]=n;b.notes[i]=[];b.hidden=b.hidden.filter(k=>k!==i);b.log='Bien joué !';checkRocks(b);const complete=completedUnitsAt(b,i);if(!victory(b))renderGame();showCompletedUnits(b,complete);save()}
 function erase(){const b=board(),i=b.selected;if(!canPlay()||i<0||b.given[i]||b.rocks.includes(i)||b.hidden.includes(i))return;b.lastMove={index:i,previous:b.values[i],notes:[...b.notes[i]],wasHidden:b.hidden.includes(i)};b.values[i]=0;b.notes[i]=[];b.hidden=b.hidden.filter(k=>k!==i);b.log='Case effacée.';renderGame();save()}
 function undo(){const b=board();if(!canPlay()||!b.lastMove)return;const m=b.lastMove;b.lastMove=null;if(b.given[m.index]||b.rocks.includes(m.index))return;b.values[m.index]=m.previous;b.notes[m.index]=m.notes;b.hidden=b.hidden.filter(i=>i!==m.index);if(m.wasHidden)b.hidden.push(m.index);b.log='Dernière saisie annulée.';renderGame();save()}
-function hint(){const b=board();if(!canPlay())return;let i=b.selected;if(i<0||b.given[i]||b.values[i]||b.rocks.includes(i))i=b.values.findIndex((v,j)=>!v&&!b.given[j]&&!b.rocks.includes(j));if(i<0)return toast('Aucune case disponible.');begin(b);b.hints++;b.selected=i;b.lastMove={index:i,previous:b.values[i],notes:[...b.notes[i]],wasHidden:false};b.values[i]=b.solution[i];b.notes[i]=[];b.log='💡 Une case a été complétée.';checkRocks(b);if(!victory(b))renderGame();save()}
+function hint(){const b=board();if(!canPlay())return;let i=b.selected;if(i<0||b.given[i]||b.values[i]||b.rocks.includes(i))i=b.values.findIndex((v,j)=>!v&&!b.given[j]&&!b.rocks.includes(j));if(i<0)return toast('Aucune case disponible.');begin(b);b.hints++;b.selected=i;b.lastMove={index:i,previous:b.values[i],notes:[...b.notes[i]],wasHidden:false};b.values[i]=b.solution[i];b.notes[i]=[];b.log='💡 Une case a été complétée.';checkRocks(b);const complete=completedUnitsAt(b,i);if(!victory(b))renderGame();showCompletedUnits(b,complete);save()}
 let waterFxTimeout=0;
 function playWaterWave(spec){const fx=$('waterFx');fx.replaceChildren();clearTimeout(waterFxTimeout);
  fx.className='water-wave-fx '+(spec[0]==='col'?'vertical':'horizontal');
@@ -853,7 +904,7 @@ function showUnlock(id){
 function modalShow(kind,stars=0){const b=board();$('modal').hidden=false;$('modalButtons').replaceChildren();$('modalFine').textContent='';$('modalSymbol').classList.remove('win-star-appear');
  if(kind==='win'){$('modalSymbol').textContent='⭐'.repeat(stars);$('modalSymbol').classList.add('win-star-appear');$('modalTitle').textContent=b.id===DAILY_ID?'Défi quotidien terminé !':b.id===10?'Chapitre terminé !':b.id===11?'Bonus réussi !':'Niveau terminé !';$('modalText').textContent=b.id===DAILY_ID?`${'★'.repeat(stars)} · ${timeText(b.elapsed)} · 1 défi réussi`:`${'★'.repeat(stars)} · ${timeText(b.elapsed)} · +${b.reward||0} pièces`;
  if(b.id===DAILY_ID){modalBtn('🏆 Succès','btn-primary',()=>{modalHide();openAchievements()});}else{const next=LEVELS.find(l=>l.id>b.id);if(next)modalBtn(isUnlocked(next.id)?'▶ Niveau suivant':`🔓 Niveau ${next.id} · ${cost(next.id)} 🪙`,'btn-primary',()=>{modalHide();openGame(next.id)});else modalBtn('↗ Retour à la carte','btn-primary',()=>{modalHide();openMap()});modalBtn('↗ Carte','btn-soft',()=>{modalHide();openMap()});modalBtn('↻ Rejouer','btn-alt',()=>restart(b.id));}}
- else{$('modalSymbol').textContent='💔';$('modalTitle').textContent='Plus de vies';$('modalText').textContent='Recommencez gratuitement ou reprenez avec une dernière chance.';if(!b.revived)modalBtn('▶ Seconde chance','btn-primary',()=>{b.revived=true;b.dead=false;b.paused=false;b.errors=2;modalHide();renderGame();save()});modalBtn('↻ Recommencer','btn-alt',()=>restart(b.id));modalBtn('← Retour à la carte','btn-soft',()=>{modalHide();openMap()});$('modalFine').textContent='Les publicités récompensées ne sont pas encore connectées.'}}
+ else{$('modalSymbol').textContent='💔';$('modalTitle').textContent='Plus de vies';$('modalText').textContent='Recommencez gratuitement ou reprenez avec une dernière chance.';if(!b.revived)modalBtn('▶ Seconde chance','btn-primary',()=>{b.revived=true;b.dead=false;b.paused=false;b.errors=2;modalHide();renderGame();save()});modalBtn('↻ Recommencer','btn-alt',()=>restart(b.id,true));modalBtn('← Retour à la carte','btn-soft',()=>{modalHide();openMap()});$('modalFine').textContent='Les publicités récompensées ne sont pas encore connectées.'}}
 function modalHide(){$('modal').hidden=true}
 function showReplay(id){const lv=byId.get(id);if(!lv)return;
  $('modal').hidden=false;$('modalButtons').replaceChildren();$('modalFine').textContent='';
@@ -875,7 +926,8 @@ function init(){document.querySelectorAll('[data-icon]').forEach(img=>img.src=A[
  load();for(const lv of LEVELS)if(!states[lv.id])states[lv.id]=initial(lv.id);syncDaily();unlockBadges();
  $('enterSurface').onclick=openMap;$('enterSurface').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openMap()}};
  $('homeContinue').onclick=continueAdventure;$('homeMap').onclick=openMap;$('mapBack').onclick=openSplash;$('mapContinue').onclick=continueAdventure;$('successOpen').onclick=openAchievements;$('successBack').onclick=openMap;$('dailyButton').onclick=openDaily;$('gameBack').onclick=()=>activeLevel===DAILY_ID?openAchievements():openMap();
- $('pauseBtn').onclick=()=>{const b=board();if(b.dead||b.won)return;b.paused=!b.paused;renderGame();save()};
+ $('deadRecovery').onclick=()=>{const b=board();if(b?.dead)restart(b.id,true)};
+  $('pauseBtn').onclick=()=>{const b=board();if(b.dead||b.won)return;b.paused=!b.paused;renderGame();save()};
  $('tutorialStart').onclick=closeTutorial;$('hintBtn').onclick=hint;$('eraseBtn').onclick=erase;$('undoBtn').onclick=undo;$('notesBtn').onclick=()=>{if(!canPlay())return;const b=board();b.notesMode=!b.notesMode;renderGame();save()};
  document.addEventListener('keydown',e=>{if(screen==='splash'&&e.key==='Enter'){openMap();return}if(screen!=='play'||!$('modal').hidden||!$('tutorial').hidden)return;const t=e.target.tagName;if(['INPUT','TEXTAREA'].includes(t))return;if(/^[1-9]$/.test(e.key)){setNumber(+e.key);e.preventDefault()}else if(e.key==='Delete'||e.key==='Backspace'){erase();e.preventDefault()}else if(e.key.toLowerCase()==='n'){if(canPlay()){board().notesMode=!board().notesMode;renderGame()}}else if(e.ctrlKey&&e.key.toLowerCase()==='z'){undo();e.preventDefault()}else if(e.key==='Escape'){activeLevel===DAILY_ID?openAchievements():openMap()}});
  document.addEventListener('visibilitychange',()=>{lastTime=performance.now();save()});window.addEventListener('pagehide',save);
